@@ -468,10 +468,14 @@ footer{background:var(--dark);color:rgba(255,255,255,.5);padding:44px 20px 28px;
       <div class="form-grp">
         <label class="form-lbl">Método de pago *</label>
         <div class="pago-grid">
-          <div class="pago-opt"><input type="radio" name="pago" id="pEfectivo" value="Efectivo" checked><label class="pago-lbl" for="pEfectivo">💵 Efectivo</label></div>
+          <div class="pago-opt"><input type="radio" name="pago" id="pEfectivo" value="Efectivo" checked onchange="actualizarCargoVales()"><label class="pago-lbl" for="pEfectivo">💵 Efectivo</label></div>
           <div class="pago-opt"><input type="radio" name="pago" id="pTransf" value="Transferencia" onchange="actualizarCargoVales()"><label class="pago-lbl" for="pTransf">🏦 Transferencia</label></div>
-          <div class="pago-opt"><input type="radio" name="pago" id="pVales" value="Vales" onchange="actualizarCargoVales()"><label class="pago-lbl" for="pVales">🎟️ Vales <span style="font-size:11px;color:var(--warn)">(+$500)</span></label></div>
+          <div class="pago-opt"><input type="radio" name="pago" id="pValeAb" value="Vale Abastible" onchange="actualizarCargoVales()"><label class="pago-lbl" for="pValeAb">🔴 Vale Abastible <span style="font-size:11px;color:var(--warn)">(+$500)</span></label></div>
+          <div class="pago-opt"><input type="radio" name="pago" id="pValeGas" value="Vale Gasco" onchange="actualizarCargoVales()"><label class="pago-lbl" for="pValeGas">🔵 Vale Gasco <span style="font-size:11px;color:var(--warn)">(+$500)</span></label></div>
           <div class="pago-opt"><input type="radio" name="pago" id="pAlRecibir" value="Pago al recibir" onchange="actualizarCargoVales()"><label class="pago-lbl" for="pAlRecibir">📦 Al recibir</label></div>
+        </div>
+        <div id="valesAviso" style="display:none;margin-top:10px;background:var(--fire-pale);border:1px solid rgba(232,82,26,.3);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--fire-dk)">
+          ⚠️ El vale cubre el valor del cilindro. El repartidor cobrará <strong>$500 adicionales en efectivo</strong> al momento de la entrega.
         </div>
       </div>
       <div class="form-grp"><label class="form-lbl">Observaciones</label><textarea class="form-ta" id="fObs" placeholder="Instrucciones de entrega, timbre, etc."></textarea></div>
@@ -526,10 +530,10 @@ footer{background:var(--dark);color:rgba(255,255,255,.5);padding:44px 20px 28px;
 <script>
 // ══════════════════════════════════════════════════════════════════
 // ⚠️  ÚNICA LÍNEA QUE DEBES EDITAR:
-//     Pega aquí la  de tu Google Apps Script desplegado como
+//     Pega aquí la URL de tu Google Apps Script desplegado como
 //     "Web App" (Implementar → Nueva implementación → Tipo: App web)
 // ══════════════════════════════════════════════════════════════════
-var GAS_ = 'https://script.google.com/macros/s/AKfycbzyaCTG1rSwJNI9vpO_FYg60rgZ8AL8VT_0UpF53v1w5Z5DMneUh9yN8t_2jYYMjqE/exec';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyN8iQlk27okkDsdKPmgfnYJ827HpX2lzSYOxvc8NrtYAl1HZc342ZgiDEtwHdDHZxB/exec';
 // Token desactivado temporalmente — reactivar cuando el sistema esté estable
 
 // ══════════════════════════════════════════════════════════════════
@@ -537,7 +541,7 @@ var GAS_ = 'https://script.google.com/macros/s/AKfycbzyaCTG1rSwJNI9vpO_FYg60rgZ8
 // ══════════════════════════════════════════════════════════════════
 function gasCall(accion, params) {
   var body = Object.assign({ accion: accion }, params || {});
-  return fetch(GAS_, {
+  return fetch(GAS_URL, {
     method: 'POST',
     mode: 'cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -815,13 +819,36 @@ function removeDisc(){
 // ══════════════════════════════════════════════════════════════════
 // CHECKOUT — reemplaza google.script.run.crearPedido
 // ══════════════════════════════════════════════════════════════════
+function esVale(pago) {
+  return pago === 'Vale Abastible' || pago === 'Vale Gasco';
+}
+
 function actualizarCargoVales(){
+  var pagoSel = document.querySelector('input[name="pago"]:checked');
+  var pago    = pagoSel ? pagoSel.value : 'Efectivo';
+  var aviso   = document.getElementById('valesAviso');
+  if(aviso) aviso.style.display = esVale(pago) ? 'block' : 'none';
   updateTotals();
-  // También actualizar el resumen del modal si está abierto
+}
+
+function updateTotals(){
+  var subtotal=carrito.reduce(function(s,i){return s+i.subtotal;},0);
+  var descAmt=0;
+  if(descuento){descAmt=descuento.tipo==='porcentaje'?Math.round(subtotal*descuento.valor/100):descuento.valor;}
   var pagoSel=document.querySelector('input[name="pago"]:checked');
-  var cargoVales=(pagoSel&&pagoSel.value==='Vales')?500:0;
-  var vr=document.getElementById('valesRowModal');
-  if(vr) vr.style.display=cargoVales?'block':'none';
+  var pago=pagoSel?pagoSel.value:'Efectivo';
+  var cargoVales=esVale(pago)?500:0;
+  var total=subtotal-descAmt+cargoVales;
+  document.getElementById('totSubtotal').textContent='$'+subtotal.toLocaleString('es-CL');
+  document.getElementById('totTotal').textContent='$'+total.toLocaleString('es-CL');
+  var dr=document.getElementById('discRow');
+  if(descAmt>0){
+    dr.style.display='flex';
+    document.getElementById('discRowLbl').textContent='🏷️ '+(descuento.descripcion||'Descuento');
+    document.getElementById('discRowAmt').textContent='-$'+descAmt.toLocaleString('es-CL');
+  } else {dr.style.display='none';}
+  var vr=document.getElementById('valesRow');
+  if(vr) vr.style.display=cargoVales?'flex':'none';
 }
 
 function openCheckout(){
@@ -829,11 +856,12 @@ function openCheckout(){
   var subtotal=carrito.reduce(function(s,i){return s+i.subtotal;},0);
   var descAmt=descuento?(descuento.tipo==='porcentaje'?Math.round(subtotal*descuento.valor/100):descuento.valor):0;
   var pagoSel=document.querySelector('input[name="pago"]:checked');
-  var cargoVales=(pagoSel&&pagoSel.value==='Vales')?500:0;
+  var pago=pagoSel?pagoSel.value:'Efectivo';
+  var cargoVales=esVale(pago)?500:0;
   var total=subtotal-descAmt+cargoVales;
   var mH=carrito.map(function(i){return '<div class="mini-item"><span>'+i.nombre+' ×'+i.cantidad+'</span><span>$'+i.subtotal.toLocaleString('es-CL')+'</span></div>';}).join('');
   if(descAmt>0)mH+='<div class="mini-item" style="color:var(--success)"><span>Descuento</span><span>-$'+descAmt.toLocaleString('es-CL')+'</span></div>';
-  if(cargoVales)mH+='<div class="mini-item" style="color:var(--warn)"><span>🎟️ Cargo Vales</span><span>+$500</span></div>';
+  if(cargoVales)mH+='<div class="mini-item" style="color:var(--warn)"><span>🎟️ Cargo vale (+$500 efectivo)</span><span>+$500</span></div>';
   document.getElementById('miniItems').innerHTML=mH;
   document.getElementById('miniTotal').textContent='$'+total.toLocaleString('es-CL')+' CLP';
   document.getElementById('checkoutForm').style.display='block';
@@ -855,7 +883,7 @@ function confirmOrder(){
   var subtotal=carrito.reduce(function(s,i){return s+i.subtotal;},0);
   var descAmt=descuento?(descuento.tipo==='porcentaje'?Math.round(subtotal*descuento.valor/100):descuento.valor):0;
   var metodoPago=pago?pago.value:'Efectivo';
-  var cargoVales=(metodoPago==='Vales')?500:0;
+  var cargoVales=esVale(metodoPago)?500:0;
   var totalFinal=subtotal-descAmt+cargoVales;
   var payload={
     nombre:nombre,email:email,telefono:tel,direccion:dir,
