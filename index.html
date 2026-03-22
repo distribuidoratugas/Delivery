@@ -526,10 +526,10 @@ footer{background:var(--dark);color:rgba(255,255,255,.5);padding:44px 20px 28px;
 <script>
 // ══════════════════════════════════════════════════════════════════
 // ⚠️  ÚNICA LÍNEA QUE DEBES EDITAR:
-//     Pega aquí la URL de tu Google Apps Script desplegado como
+//     Pega aquí la  de tu Google Apps Script desplegado como
 //     "Web App" (Implementar → Nueva implementación → Tipo: App web)
 // ══════════════════════════════════════════════════════════════════
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbz9F_MdYhsklzDTT-aMcIRjWxEwlKC6LK3Sf-BuyQK2BnYYep62-tWEtgwMmi44sb8C/exec';
+var GAS_ = 'https://script.google.com/macros/s/AKfycbzyaCTG1rSwJNI9vpO_FYg60rgZ8AL8VT_0UpF53v1w5Z5DMneUh9yN8t_2jYYMjqE/exec';
 // Token desactivado temporalmente — reactivar cuando el sistema esté estable
 
 // ══════════════════════════════════════════════════════════════════
@@ -537,7 +537,7 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbz9F_MdYhsklzDTT-aMcIRjWx
 // ══════════════════════════════════════════════════════════════════
 function gasCall(accion, params) {
   var body = Object.assign({ accion: accion }, params || {});
-  return fetch(GAS_URL, {
+  return fetch(GAS_, {
     method: 'POST',
     mode: 'cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
